@@ -1,0 +1,9 @@
+gym==0.26.0
+box2d==2.3.2
+pygame==2.4.0
+tensorflow==2.9.0
+keras-rl2==1.0.5
+pandas==2.0.2
+gymnasium==0.29.0
+torch==2.0.1
+matplotlib

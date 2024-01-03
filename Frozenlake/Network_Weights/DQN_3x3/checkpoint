@@ -1,0 +1,2 @@
+model_checkpoint_path: "duel_dqn_FrozenLake-v1_slip_weights_retrain.h5f"
+all_model_checkpoint_paths: "duel_dqn_FrozenLake-v1_slip_weights_retrain.h5f"
