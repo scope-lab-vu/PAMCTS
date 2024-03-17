@@ -8,6 +8,7 @@ import logging
 import time
 import numpy as np
 import pandas as pd
+
 # from build_model import build_model
 # from utils import index_to_array, array_to_index
 # from MCTS.pauct.fl_PAMCTS_Outside import FL_PAMCTS_Outside
@@ -15,16 +16,15 @@ import pandas as pd
 # from env.frozen_lake_9_10_1_20 import FrozenLakeEnv_9_10_1_20
 import time
 
-logging.basicConfig(format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-                    datefmt='%Y-%m-%d:%H:%M:%S', level=logging.INFO,
-                    handlers=[logging.FileHandler(f"logs/frozenlake_test", mode='w')])
+logging.basicConfig(
+    format="%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s",
+    datefmt="%Y-%m-%d:%H:%M:%S",
+    level=logging.INFO,
+    handlers=[logging.FileHandler(f"logs/frozenlake_test", mode="w")],
+)
 logger = logging.getLogger()
 
-custom_map = [
-    "SHF",
-    "FFF",
-    "HFG"
-]
+custom_map = ["SHF", "FFF", "HFG"]
 
 # 0 H 2
 # 3 4 5
@@ -101,7 +101,9 @@ def transition(state, move, STRAIGHT_PROBABILITY=None, CLOCKWISE_PROBABILITY=Non
         if rnd < STRAIGHT_PROBABILITY + CLOCKWISE_PROBABILITY:
             move = (move + 1) % 4  # turn clockwise
         else:
-            move = (move - 1 + 4) % 4  # turn counter-clockwise (note the positive modulo)
+            move = (
+                move - 1 + 4
+            ) % 4  # turn counter-clockwise (note the positive modulo)
     next_state = clip_move(state, move)
     if next_state in HOLES:
         return next_state, 0, True
@@ -126,8 +128,12 @@ def rollout(state, prob_distribution, depth):
     depth = depth
     while not done and depth < MAX_DEPTH:
         action = select_action_rollout(state)
-        (next_state, reward, done) = transition(state, action, STRAIGHT_PROBABILITY=prob_distribution[0],
-                                                CLOCKWISE_PROBABILITY=prob_distribution[1])
+        (next_state, reward, done) = transition(
+            state,
+            action,
+            STRAIGHT_PROBABILITY=prob_distribution[0],
+            CLOCKWISE_PROBABILITY=prob_distribution[1],
+        )
         depth += 1
         state = next_state
     return reward
@@ -147,8 +153,12 @@ def MCTS(root_state, prob_distribution, iterations, c_puct):
             # logging.warning(f"State: {state}")
             action = select_action(C=c_puct, state=state, n=n, v=v)
             trajectory.append((state, action))
-            (next_state, reward, done) = transition(state, action, STRAIGHT_PROBABILITY=prob_distribution[0],
-                                                    CLOCKWISE_PROBABILITY=prob_distribution[1])
+            (next_state, reward, done) = transition(
+                state,
+                action,
+                STRAIGHT_PROBABILITY=prob_distribution[0],
+                CLOCKWISE_PROBABILITY=prob_distribution[1],
+            )
             depth += 1
             if done or depth > MAX_DEPTH:
                 break
@@ -156,7 +166,7 @@ def MCTS(root_state, prob_distribution, iterations, c_puct):
                 reward = rollout(next_state, prob_distribution, depth)
                 break
             state = next_state
-        for (state, action) in trajectory:
+        for state, action in trajectory:
             n[state, action] += 1
             v[state, action] += reward
     # return select_action(0, root_state, n, v)
@@ -168,7 +178,9 @@ def get_pa_uct_score(alpha, policy_value, mcts_return):
     hybrid_node_value = (alpha * policy_value) + ((1.0 - alpha) * mcts_return)
 
     # TODO | might want to include ucb1?
-    return hybrid_node_value  # + self.C * np.sqrt(np.log(self.parent.visits)/self.visits)
+    return (
+        hybrid_node_value  # + self.C * np.sqrt(np.log(self.parent.visits)/self.visits)
+    )
 
 
 def simulate_episode(policy, network, iterations, c_puct, prob_distribution, alpha):
@@ -176,40 +188,94 @@ def simulate_episode(policy, network, iterations, c_puct, prob_distribution, alp
     state = START_STATE
     while True:
         policy_value_list = network.get_q_values(state)
-        mcts_return_list = policy(root_state=state, prob_distribution=prob_distribution, iterations=iterations, c_puct=c_puct)
+        mcts_return_list = policy(
+            root_state=state,
+            prob_distribution=prob_distribution,
+            iterations=iterations,
+            c_puct=c_puct,
+        )
         best_action = None
-        best_score = float('-inf')
+        best_score = float("-inf")
         for i in range(4):
-            score = get_pa_uct_score(alpha=alpha, policy_value=policy_value_list[i], mcts_return=mcts_return_list[i])
+            score = get_pa_uct_score(
+                alpha=alpha,
+                policy_value=policy_value_list[i],
+                mcts_return=mcts_return_list[i],
+            )
             if score > best_score:
                 best_score = score
                 best_action = i
-        (next_state, reward, done) = transition(state, best_action, STRAIGHT_PROBABILITY=prob_distribution[0],
-                                                CLOCKWISE_PROBABILITY=prob_distribution[1])
+        (next_state, reward, done) = transition(
+            state,
+            best_action,
+            STRAIGHT_PROBABILITY=prob_distribution[0],
+            CLOCKWISE_PROBABILITY=prob_distribution[1],
+        )
         steps += 1
         # logging.warning(f"State: {state}; Move: {move}; Next state: {next_state}; Reward: {reward}; Done: {done}.")
         if done or steps > MAX_DEPTH:
             return steps, reward
+        
+        # ^ print state, best_action, next_state
+        print(f"State: {state}; Best action: {best_action}; Next state: {next_state}, Score: {best_score}")
+
         state = next_state
 
 
-def evaluate_policy(policy, verbose, network, iterations, c_puct, prob_distribution, sample_id, gamma, alpha, file_name):
+def evaluate_policy(
+    policy,
+    verbose,
+    network,
+    iterations,
+    c_puct,
+    prob_distribution,
+    sample_id,
+    gamma,
+    alpha,
+    file_name,
+):
     start_time = time.time()
     lengths = np.zeros(1)
     outcomes = np.zeros(1)
     for episode in range(1):
-        (length, outcome) = simulate_episode(policy, network, iterations, c_puct, prob_distribution, alpha)
+        (length, outcome) = simulate_episode(
+            policy, network, iterations, c_puct, prob_distribution, alpha
+        )
         lengths[episode] = length
         outcomes[episode] = outcome
         if verbose:
             print(f"Episode: {episode}; Length: {length}; Outcome: {outcome}.")
     prob_distribution = [f"{prob:.3f}" for prob in prob_distribution]
-    results = [[outcomes[0], prob_distribution, iterations, sample_id, time.time() - start_time, lengths[0], c_puct, gamma, alpha]]
+    results = [
+        [
+            outcomes[0],
+            prob_distribution,
+            iterations,
+            sample_id,
+            time.time() - start_time,
+            lengths[0],
+            c_puct,
+            gamma,
+            alpha,
+        ]
+    ]
     if not os.path.exists(file_name):
         with open(file_name, "w") as f:
-            pd.DataFrame(results).to_csv(f, header=["cumulative_reward", "prob_distribution", "iterations",
-                                                    "sample id", "computation time", "step_counter", "c_puct", "gamma", "alpha"],
-                                         index=False)
+            pd.DataFrame(results).to_csv(
+                f,
+                header=[
+                    "cumulative_reward",
+                    "prob_distribution",
+                    "iterations",
+                    "sample id",
+                    "computation time",
+                    "step_counter",
+                    "c_puct",
+                    "gamma",
+                    "alpha",
+                ],
+                index=False,
+            )
     else:
         with open(file_name, "a") as f:
             pd.DataFrame(results).to_csv(f, header=False, index=False)
@@ -222,6 +288,7 @@ def evaluate_policy(policy, verbose, network, iterations, c_puct, prob_distribut
 
 def run_simulations(args):
     from Network_Weights.DQN_3x3.ddqn_agent_FL import DDQN_Learning_Agent_FL
+
     # print("-= MCTS policy =-")
     env = gym.make("FrozenLake-v1", desc=custom_map)
     number_of_actions = env.action_space.n
@@ -234,40 +301,80 @@ def run_simulations(args):
     gamma = args["gamma"]
     alpha = args["alpha"]
     file_name = args["file_name"]
-    dqn_learning_agent = DDQN_Learning_Agent_FL(number_of_actions=number_of_actions,
-                                                env_obs_space_shape=env_obs_space_shape)
-    dqn_learning_agent.load_saved_weights("Network_Weights/DQN_3x3/duel_dqn_FrozenLake-v1_slip_weights_reorder.h5f")
-    evaluate_policy(MCTS, verbose=True, network=dqn_learning_agent, iterations=iterations, c_puct=c_puct,
-                    prob_distribution=prob_distribution, sample_id=sample_id, gamma=gamma, alpha=alpha,
-                    file_name=file_name)
+    dqn_learning_agent = DDQN_Learning_Agent_FL(
+        number_of_actions=number_of_actions, env_obs_space_shape=env_obs_space_shape
+    )
+    dqn_learning_agent.load_saved_weights(
+        "Network_Weights/DQN_3x3/duel_dqn_FrozenLake-v1_slip_weights_reorder.h5f"
+    )
+    evaluate_policy(
+        MCTS,
+        verbose=True,
+        network=dqn_learning_agent,
+        iterations=iterations,
+        c_puct=c_puct,
+        prob_distribution=prob_distribution,
+        sample_id=sample_id,
+        gamma=gamma,
+        alpha=alpha,
+        file_name=file_name,
+    )
     print(f"Time taken: {time.time() - start_time} seconds.")
 
 
 if __name__ == "__main__":
-    num_cpus = 90
+    num_cpus = 1
     saved_file_name = "frozenlake_pamcts_results_final.csv"
     # saved_file_name = "sanity_check2.csv"
     begin_time = time.time()
     args = []
-    for prob_distribution in [[1.0, 0.0, 0.0], [14.0 / 15.0, 1.0 / 30.0, 1.0 / 30.0],
-                              [5.0 / 6.0, 1.0 / 12.0, 1.0 / 12.0], [11.0 / 15.0, 2.0 / 15.0, 2.0 / 15.0],
-                              [19.0 / 30.0, 11.0 / 60.0, 11.0 / 60.0], [8.0 / 15.0, 7.0 / 30.0, 7.0 / 30.0],
-                              [13.0 / 30.0, 17.0 / 60.0, 17.0 / 60.0], [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]]:
-    # for prob_distribution in [[19.0 / 30.0, 11.0 / 60.0, 11.0 / 60.0], [8.0 / 15.0, 7.0 / 30.0, 7.0 / 30.0]]:
-        for alpha in [0.0, 0.25, 0.5, 0.75, 1.0]:
-        # for alpha in [0.0]:
-            for iterations in [25, 50, 100, 200, 500, 1000, 1500, 2000, 3000, 4000, 5000]:
-            # for iterations in [3000, 5000]:
+    # for prob_distribution in [
+    #     [1.0, 0.0, 0.0],
+    #     [14.0 / 15.0, 1.0 / 30.0, 1.0 / 30.0],
+    #     [5.0 / 6.0, 1.0 / 12.0, 1.0 / 12.0],
+    #     [11.0 / 15.0, 2.0 / 15.0, 2.0 / 15.0],
+    #     [19.0 / 30.0, 11.0 / 60.0, 11.0 / 60.0],
+    #     [8.0 / 15.0, 7.0 / 30.0, 7.0 / 30.0],
+    #     [13.0 / 30.0, 17.0 / 60.0, 17.0 / 60.0],
+    #     [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
+    # ]:
+    for prob_distribution in [[1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]]:
+        for alpha in [1.0]:
+            # for alpha in [0.0]:
+            # for iterations in [
+            #     25,
+            #     50,
+            #     100,
+            #     200,
+            #     500,
+            #     1000,
+            #     1500,
+            #     2000,
+            #     3000,
+            #     4000,
+            #     5000,
+            # ]:
+            for iterations in [1000]:
                 for c_puct in [1.414]:
                     for gamma in [0.999]:
-                        for sample_id in range(100):
-                            args.append({"prob_distribution": prob_distribution, "alpha": alpha, "gamma": gamma,
-                                         "iterations": iterations, "c_puct": c_puct, "sample_id": sample_id,
-                                         "file_name": saved_file_name})
+                        for sample_id in range(1):
+                            args.append(
+                                {
+                                    "prob_distribution": prob_distribution,
+                                    "alpha": alpha,
+                                    "gamma": gamma,
+                                    "iterations": iterations,
+                                    "c_puct": c_puct,
+                                    "sample_id": sample_id,
+                                    "file_name": saved_file_name,
+                                }
+                            )
 
     with Pool(processes=num_cpus) as pool:
         pool.map(run_simulations, args)
 
     print(f"experiments completed")
     with open("frozenlake_pamcts_execution_time_final.txt", "w") as f:
-        f.write(f"fl final pamcts experiments execution time: {time.time() - begin_time}")
+        f.write(
+            f"fl final pamcts experiments execution time: {time.time() - begin_time}"
+        )

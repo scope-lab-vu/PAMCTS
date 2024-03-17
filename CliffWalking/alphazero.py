@@ -112,7 +112,7 @@ def MCTS(root_state, network, slippery, iterations, C, gamma):
             v[state, action] += reward
         # if root_state == 35:
         #     print(f"after MCTS, v: {v[root_state]}")
-    return np.argmax(v[root_state] / n[root_state])
+    return np.argmax(v[root_state] / n[root_state]), v[root_state]
 
 
 def simulate_episode(policy, network, iterations, C, slippery, gamma):
@@ -120,10 +120,11 @@ def simulate_episode(policy, network, iterations, C, slippery, gamma):
     state = START_STATE
     step_count = 0
     while True:
-        action = policy(state, network, slippery, iterations, C, gamma)
+        action, score = policy(state, network, slippery, iterations, C, gamma)
         (next_state, reward, done) = transition(state, action, slippery=slippery, step_count=step_count)
         step_count += 1
-        print(f"State: {state}; Move: {action}; Next state: {next_state}; Reward: {reward}; Done: {done}")
+        # print(f"State: {state}; Move: {action}; Next state: {next_state}; Reward: {reward}; Done: {done}")
+        print(f"State: {state}; Move: {action}; Next state: {next_state}; Score: {score};")
         steps += 1
         if done or steps > MAX_DEPTH:
             return steps, reward
@@ -172,11 +173,11 @@ if __name__ == "__main__":
     weights_file = "cliff_walking_alphazero_weights.h5f"
     begin_time = time.time()
     args = []
-    for slippery in [0.0, 0.1, 0.2, 0.3]:
-        for iterations in [25, 50, 75, 100, 200, 500, 1000]:
+    for slippery in [0.2]:
+        for iterations in [100]:
             for C in [50.0]:
                 for gamma in [0.99]:
-                    for sample_id in range(100):
+                    for sample_id in range(1):
                         args.append({"slippery": slippery, "iterations": iterations, "weights_file": weights_file,
                                     "sample_id": sample_id, "C": C, "gamma": gamma, "file_name": file_name})
     

@@ -171,7 +171,8 @@ def simulate_episode(policy, network, iterations, C, slippery, alpha, gamma):
                 best_action = i
         (next_state, reward, done) = transition(state, best_action, slippery=slippery, step_count=step_count)
         step_count += 1
-        print(f"State: {state}; Move: {best_action}; Next state: {next_state}; Reward: {reward}; Done: {done}")
+        # print(f"State: {state}; Move: {best_action}; Next state: {next_state}; Reward: {reward}; Done: {done}")
+        print(f"State: {state}; Move: {best_action}; Next state: {next_state}; Score: {best_score};")
         steps += 1
         # logging.warning(f"State: {state}; Move: {move}; Next state: {next_state}; Reward: {reward}; Done: {done}.")
         if done or steps > MAX_DEPTH:
@@ -217,19 +218,19 @@ def run_simulations(args):
 
 
 if __name__ == "__main__":
-    num_cpus = 50
+    num_cpus = 1
     file_name = "cliff_walking_pamcts.csv"
     begin_time = time.time()
     args = []
     # ^ slippery = [0.0, 0.1, 0.2, 0.3]
     # ^ alpha = [0.0, 0.25, 0.5, 0.75, 1.0]
     # ^ iterations = [25, 50, 75, 100, 200, 500, 1000]
-    for slippery in [0.0, 0.1, 0.2, 0.3]:
-        for alpha in [0.0, 0.25, 0.5, 0.75, 1.0]:
-            for iterations in [25, 50, 75, 100, 200, 500, 1000]:
+    for slippery in [0.2]:
+        for alpha in [1.0]:
+            for iterations in [100]:
                 for C in [50.0]:
                     for gamma in [0.99]:
-                        for sample_id in range(100):
+                        for sample_id in range(1):
                             args.append({"slippery": slippery, "alpha": alpha, "iterations": iterations,
                                         "sample_id": sample_id, "C": C, "gamma": gamma, "file_name": file_name})
                             

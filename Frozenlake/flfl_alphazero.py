@@ -281,23 +281,20 @@ def run_simulations(args):
 
 
 if __name__ == "__main__":
-    num_cpus = 90
+    num_cpus = 1
     file_name = "frozenlake_alphazero_final_part2.csv"
     begin_time = time.time()
     args = []
-    for prob_distribution in [[1.0, 0.0, 0.0], [14.0 / 15.0, 1.0 / 30.0, 1.0 / 30.0],
-                              [5.0 / 6.0, 1.0 / 12.0, 1.0 / 12.0], [11.0 / 15.0, 2.0 / 15.0, 2.0 / 15.0],
-                              [19.0 / 30.0, 11.0 / 60.0, 11.0 / 60.0], [8.0 / 15.0, 7.0 / 30.0, 7.0 / 30.0],
-                              [13.0 / 30.0, 17.0 / 60.0, 17.0 / 60.0], [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]]:
+    for prob_distribution in [[1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0]]:
     # for prob_distribution in [[1.0, 0.0, 0.0]]:
-        for iterations in [4000, 5000]:
+        for iterations in [1000]:
         # for iterations in [3000]:
             for c_puct in [1.414]:
-                for sample_id in range(100):
+                for sample_id in range(1):
                     # network = build_model(num_hidden_layers=5, state_size=9)
                     # network.load_weights("Network_Weights/Alphazero_final/weights_final.h5f")
                     args.append({"prob_distribution": prob_distribution, "iterations": iterations,
-                                 "c_puct": c_puct, "sample_id": sample_id, "file_name": file_name})
+                                "c_puct": c_puct, "sample_id": sample_id, "file_name": file_name})
 
     with Pool(processes=num_cpus) as pool:
         pool.map(run_simulations, args)
